@@ -10,12 +10,12 @@ DEFAULT_MODEL = "mlx-community/whisper-large-v3-mlx"
 
 def align_lyrics(audio_path: Path, lyrics_lines: list[str], model_repo: str = DEFAULT_MODEL) -> list[TimedLine]:
     """
-    Align lyrics lines to audio using Whisper segment boundaries.
+    Align lyrics lines to audio using Whisper word-level timestamps.
 
-    Strategy: Use Whisper to detect vocal segments (when someone is singing),
-    then map user lyrics lines to these segments in order. This avoids the
-    unreliable character-matching approach — we only use Whisper for timing,
-    not for text recognition.
+    Strategy: Use Whisper to detect all word/syllable boundaries (timing only,
+    ignore transcribed text). Then distribute lyrics lines proportionally across
+    these time markers based on character count. This works regardless of language
+    mismatch between Whisper output and actual lyrics.
     """
     result = mlx_whisper.transcribe(
         str(audio_path),
@@ -23,131 +23,83 @@ def align_lyrics(audio_path: Path, lyrics_lines: list[str], model_repo: str = DE
         word_timestamps=True,
     )
 
-    segments = result.get("segments", [])
+    # Collect all word timestamps (we only care about timing, not text)
+    word_times: list[tuple[float, float]] = []
+    for segment in result.get("segments", []):
+        for w in segment.get("words", []):
+            start = w.get("start", 0.0)
+            end = w.get("end", 0.0)
+            if end > start:
+                word_times.append((start, end))
 
-    if not segments:
+    if not word_times:
         duration = result.get("duration", 0.0)
+        if not duration and result.get("segments"):
+            duration = result["segments"][-1].get("end", 0.0)
         return _even_distribute(lyrics_lines, duration)
 
-    total_duration = segments[-1].get("end", 0.0)
+    # Detect vocal regions: merge word times into continuous singing regions
+    # (gap < 1.5s means same region)
+    regions: list[tuple[float, float, int, int]] = []  # (start, end, word_start_idx, word_end_idx)
+    region_start_idx = 0
+    region_start = word_times[0][0]
+    region_end = word_times[0][1]
 
-    # Collect segment boundaries (each segment ≈ one phrase of singing)
-    seg_boundaries: list[tuple[float, float]] = []
-    for seg in segments:
-        start = seg.get("start", 0.0)
-        end = seg.get("end", 0.0)
-        if end > start:
-            seg_boundaries.append((start, end))
+    for i in range(1, len(word_times)):
+        if word_times[i][0] - region_end > 1.5:
+            # New region
+            regions.append((region_start, region_end, region_start_idx, i))
+            region_start_idx = i
+            region_start = word_times[i][0]
+        region_end = word_times[i][1]
+    regions.append((region_start, region_end, region_start_idx, len(word_times)))
 
-    if not seg_boundaries:
-        return _even_distribute(lyrics_lines, total_duration)
+    # Calculate character count per line
+    line_chars = [len(line.replace(" ", "")) for line in lyrics_lines]
+    total_chars = sum(line_chars)
 
-    # Merge segments that are very close together (< 0.3s gap)
-    merged: list[tuple[float, float]] = [seg_boundaries[0]]
-    for start, end in seg_boundaries[1:]:
-        prev_start, prev_end = merged[-1]
-        if start - prev_end < 0.3:
-            merged[-1] = (prev_start, end)
-        else:
-            merged.append((start, end))
+    if total_chars == 0:
+        return _even_distribute(lyrics_lines, word_times[-1][1])
 
-    # Now map lyrics lines to segments
-    num_lines = len(lyrics_lines)
-    num_segs = len(merged)
+    # Total number of word slots available
+    total_words = len(word_times)
 
-    if num_lines == num_segs:
-        # Perfect 1:1 mapping
-        return _map_lines_to_segs(lyrics_lines, merged)
+    # Assign word slots to each line proportionally by character count
+    timed_lines: list[TimedLine] = []
+    word_idx = 0
 
-    if num_lines < num_segs:
-        # More segments than lyrics lines — group segments
-        return _distribute_fewer_lines(lyrics_lines, merged)
+    for i, line in enumerate(lyrics_lines):
+        chars = line_chars[i]
+        if chars == 0:
+            # Empty line gets a tiny slot
+            if timed_lines:
+                t = timed_lines[-1].end
+            else:
+                t = word_times[0][0]
+            timed_lines.append(TimedLine(text=line, start=t, end=t + 0.1))
+            continue
 
-    # More lyrics lines than segments — split segments
-    return _distribute_more_lines(lyrics_lines, merged, total_duration)
+        # How many word slots this line gets
+        remaining_chars = sum(line_chars[i:])
+        remaining_words = total_words - word_idx
+        word_count = max(1, round(remaining_words * chars / remaining_chars))
+        word_count = min(word_count, remaining_words)
 
+        # Get time range from assigned word slots
+        start_idx = word_idx
+        end_idx = min(word_idx + word_count, total_words) - 1
 
-def _map_lines_to_segs(
-    lines: list[str], segs: list[tuple[float, float]]
-) -> list[TimedLine]:
-    """1:1 mapping of lyrics lines to segments."""
-    return [
-        TimedLine(text=line, start=s, end=e)
-        for line, (s, e) in zip(lines, segs)
-    ]
+        line_start = word_times[start_idx][0]
+        line_end = word_times[end_idx][1]
 
+        timed_lines.append(TimedLine(text=line, start=line_start, end=line_end))
+        word_idx += word_count
 
-def _distribute_fewer_lines(
-    lines: list[str], segs: list[tuple[float, float]]
-) -> list[TimedLine]:
-    """More segments than lines: group consecutive segments per line."""
-    num_lines = len(lines)
-    num_segs = len(segs)
+    # Handle any remaining unassigned time
+    if timed_lines and word_idx < total_words:
+        timed_lines[-1].end = word_times[-1][1]
 
-    # Distribute segments as evenly as possible across lines
-    timed: list[TimedLine] = []
-    seg_idx = 0
-    for i, line in enumerate(lines):
-        # How many segments for this line
-        remaining_lines = num_lines - i
-        remaining_segs = num_segs - seg_idx
-        count = max(1, remaining_segs // remaining_lines)
-
-        group_start = segs[seg_idx][0]
-        group_end = segs[min(seg_idx + count - 1, num_segs - 1)][1]
-        timed.append(TimedLine(text=line, start=group_start, end=group_end))
-        seg_idx += count
-
-    return timed
-
-
-def _distribute_more_lines(
-    lines: list[str], segs: list[tuple[float, float]], total_duration: float
-) -> list[TimedLine]:
-    """More lines than segments: subdivide segments to fit all lines."""
-    num_lines = len(lines)
-    num_segs = len(segs)
-
-    # Calculate total singing time
-    total_sing_time = sum(e - s for s, e in segs)
-
-    timed: list[TimedLine] = []
-    line_idx = 0
-
-    for seg_start, seg_end in segs:
-        seg_duration = seg_end - seg_start
-        # How many lines go into this segment (proportional to duration)
-        remaining_lines = num_lines - line_idx
-        remaining_segs_time = sum(e - s for s, e in segs[segs.index((seg_start, seg_end)):])
-        if remaining_segs_time > 0:
-            count = max(1, round(remaining_lines * seg_duration / remaining_segs_time))
-        else:
-            count = remaining_lines
-        count = min(count, remaining_lines)
-
-        # Subdivide this segment equally
-        sub_duration = seg_duration / count
-        for j in range(count):
-            sub_start = seg_start + j * sub_duration
-            sub_end = seg_start + (j + 1) * sub_duration
-            if line_idx < num_lines:
-                timed.append(TimedLine(text=lines[line_idx], start=sub_start, end=sub_end))
-                line_idx += 1
-
-    # Any remaining lines get distributed after last segment
-    if line_idx < num_lines:
-        remaining = lines[line_idx:]
-        last_end = timed[-1].end if timed else 0
-        gap = total_duration - last_end
-        per_line = max(0.5, gap / len(remaining)) if remaining else 0
-        for i, line in enumerate(remaining):
-            timed.append(TimedLine(
-                text=line,
-                start=last_end + i * per_line,
-                end=last_end + (i + 1) * per_line,
-            ))
-
-    return timed
+    return timed_lines
 
 
 def _even_distribute(lyrics_lines: list[str], duration: float) -> list[TimedLine]:
