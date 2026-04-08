@@ -107,7 +107,7 @@ class VinylMinimalTheme:
                 )
 
     def draw_title_text(self, draw: ImageDraw.Draw, text: str, canvas_w: int, y: int, max_w: int) -> None:
-        draw.text((canvas_w // 2, y), text, fill=(220, 210, 190), anchor="mt", font=get_font(48))
+        draw.text((canvas_w // 2, y), text, fill=(220, 210, 190), anchor="mt", font=get_font(48, "title"))
 
     def draw_artist_text(self, draw: ImageDraw.Draw, text: str, canvas_w: int, y: int, max_w: int) -> None:
         draw.text((canvas_w // 2, y), text, fill=(150, 140, 120), anchor="mt", font=get_font(32))

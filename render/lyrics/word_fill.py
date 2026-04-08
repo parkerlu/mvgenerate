@@ -12,7 +12,7 @@ class WordFillLyrics:
             return
 
         draw = ImageDraw.Draw(frame)
-        font = get_font(38)
+        font = get_font(38, "bold")
 
         lyrics_y = int(h * 0.68)
 

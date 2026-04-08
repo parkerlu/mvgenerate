@@ -12,7 +12,7 @@ class KaraokeLyrics:
             return
 
         draw = ImageDraw.Draw(frame)
-        font_highlight = get_font(40)
+        font_highlight = get_font(40, "bold")
         font_normal = get_font(30)
 
         current_idx = 0

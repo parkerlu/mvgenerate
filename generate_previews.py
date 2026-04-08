@@ -68,7 +68,7 @@ def render_theme_preview(theme_cls, name: str, cover: Image.Image):
 
     # Draw sample lyrics (karaoke style, simplified)
     draw = ImageDraw.Draw(frame)
-    font_big = get_font(22)
+    font_big = get_font(22, "bold")
     font_small = get_font(16)
 
     lyrics_y = int(PREVIEW_H * 0.62)
@@ -90,7 +90,7 @@ def render_lyrics_preview(style_name: str):
     img = Image.new("RGB", (w, h), (15, 15, 30))
     draw = ImageDraw.Draw(img)
 
-    font_big = get_font(22)
+    font_big = get_font(22, "bold")
     font_med = get_font(18)
     font_small = get_font(16)
 

@@ -123,7 +123,7 @@ class NeonPulseTheme:
             draw.line([(x1, y1), (x2, y2)], fill=(r, g, b), width=1)
 
     def draw_title_text(self, draw: ImageDraw.Draw, text: str, canvas_w: int, y: int, max_w: int) -> None:
-        draw.text((canvas_w // 2, y), text, fill="white", anchor="mt", font=get_font(48))
+        draw.text((canvas_w // 2, y), text, fill="white", anchor="mt", font=get_font(48, "title"))
 
     def draw_artist_text(self, draw: ImageDraw.Draw, text: str, canvas_w: int, y: int, max_w: int) -> None:
         draw.text((canvas_w // 2, y), text, fill=(180, 180, 200), anchor="mt", font=get_font(32))
