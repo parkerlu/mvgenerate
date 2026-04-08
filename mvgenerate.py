@@ -124,21 +124,45 @@ def generate(config: GenerateConfig, progress_callback=None) -> None:
     total_frames = renderer.total_frames(features.duration)
     width, height = RESOLUTIONS[config.aspect]
 
-    # Determine audio source (full or trimmed)
-    audio_for_video = config.audio_path
-    tmp_chorus_audio = None
+    # Prepare audio: add silence for cover+transition phases so audio syncs with video
+    import subprocess as sp
+    import tempfile
+    import os
+
+    playback_start = COVER_DURATION + TRANSITION_DURATION
+    tmp_fd, tmp_audio_path = tempfile.mkstemp(suffix=".wav")
+    os.close(tmp_fd)
+
+    source_audio = config.audio_path
     if chorus_start is not None:
-        import subprocess, tempfile
-        tmp_chorus_audio = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
-        subprocess.run([
+        # First trim to chorus section
+        tmp_fd2, tmp_chorus = tempfile.mkstemp(suffix=".mp3")
+        os.close(tmp_fd2)
+        sp.run([
             "ffmpeg", "-y",
             "-i", str(config.audio_path),
             "-ss", str(chorus_start),
             "-to", str(chorus_end),
             "-c", "copy",
-            tmp_chorus_audio.name,
+            tmp_chorus,
         ], capture_output=True)
-        audio_for_video = tmp_chorus_audio.name
+        source_audio = Path(tmp_chorus)
+
+    # Prepend silence matching cover+transition duration
+    sp.run([
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", f"anullsrc=r=44100:cl=stereo",
+        "-t", str(playback_start),
+        "-i", str(source_audio),
+        "-filter_complex", "[0][1]concat=n=2:v=0:a=1",
+        tmp_audio_path,
+    ], capture_output=True)
+
+    audio_for_video = Path(tmp_audio_path)
+    tmp_chorus_audio = tmp_audio_path
+
+    if chorus_start is not None:
+        os.unlink(tmp_chorus)
 
     def frame_generator():
         for i in range(total_frames):
@@ -158,7 +182,7 @@ def generate(config: GenerateConfig, progress_callback=None) -> None:
     # Clean up temp chorus audio
     if tmp_chorus_audio is not None:
         import os
-        os.unlink(tmp_chorus_audio.name)
+        os.unlink(tmp_chorus_audio)
 
     report(f"Done! Video saved to {config.output_path}", 1.0)
 
