@@ -28,8 +28,8 @@ export default function App() {
     lyricsStyle: 'karaoke',
     mode: 'full',
   })
-  const [title, setTitle] = useState('')
-  const [artist, setArtist] = useState('')
+  const [title, setTitle] = useState(() => localStorage.getItem('mv_title') || '')
+  const [artist, setArtist] = useState(() => localStorage.getItem('mv_artist') || '')
   const [taskId, setTaskId] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const [statusMsg, setStatusMsg] = useState('')
@@ -87,8 +87,8 @@ export default function App() {
     setStep(1)
     setFiles({})
     setConfig({ aspect: '9:16', theme: 'neon', lyricsStyle: 'karaoke', mode: 'full' })
-    setTitle('')
-    setArtist('')
+    setTitle(localStorage.getItem('mv_title') || '')
+    setArtist(localStorage.getItem('mv_artist') || '')
     setTaskId(null)
     setProgress(0)
     setStatusMsg('')
@@ -159,7 +159,7 @@ export default function App() {
               <input
                 placeholder="Enter song title..."
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => { setTitle(e.target.value); localStorage.setItem('mv_title', e.target.value) }}
               />
             </div>
             <div className="form-group">
@@ -167,7 +167,7 @@ export default function App() {
               <input
                 placeholder="Enter artist name..."
                 value={artist}
-                onChange={(e) => setArtist(e.target.value)}
+                onChange={(e) => { setArtist(e.target.value); localStorage.setItem('mv_artist', e.target.value) }}
               />
             </div>
             <div className="form-group">
