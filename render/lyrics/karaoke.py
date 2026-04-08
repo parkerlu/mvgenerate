@@ -1,30 +1,54 @@
 # render/lyrics/karaoke.py
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from config import TimedLine
 
 
 class KaraokeLyrics:
+    """KTV-style lyrics: show 3-5 lines, highlight current, smooth scroll."""
+
     def draw(self, frame: Image.Image, time_s: float, lines: list[TimedLine], theme, w: int, h: int):
+        if not lines:
+            return
+
         draw = ImageDraw.Draw(frame)
+
+        try:
+            font_highlight = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 40)
+            font_normal = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 30)
+        except OSError:
+            font_highlight = ImageFont.load_default()
+            font_normal = font_highlight
+
         current_idx = 0
         for i, line in enumerate(lines):
-            if line.start <= time_s <= line.end:
+            if line.start <= time_s:
                 current_idx = i
-                break
             if line.start > time_s:
-                current_idx = max(0, i - 1)
                 break
 
         visible_range = 2
-        lyrics_y = int(h * 0.65)
-        line_height = 50
+        lyrics_area_y = int(h * 0.62)
+        line_spacing = 55
 
         for offset in range(-visible_range, visible_range + 1):
             idx = current_idx + offset
-            if 0 <= idx < len(lines):
-                y = lyrics_y + offset * line_height
-                if offset == 0:
-                    color = theme.get_lyrics_highlight_color()
-                else:
-                    color = theme.get_lyrics_dim_color()
-                draw.text((w // 2, y), lines[idx].text, fill=color, anchor="mt")
+            if idx < 0 or idx >= len(lines):
+                continue
+
+            y = lyrics_area_y + offset * line_spacing
+
+            if current_idx < len(lines):
+                cur = lines[current_idx]
+                if cur.end > cur.start:
+                    progress = min(1.0, (time_s - cur.start) / (cur.end - cur.start))
+                    y -= int(progress * line_spacing * 0.3)
+
+            if offset == 0:
+                color = theme.get_lyrics_highlight_color()
+                draw.text((w // 2, y), lines[idx].text, fill=color, anchor="mt", font=font_highlight)
+            else:
+                dim = theme.get_lyrics_dim_color()
+                dist = abs(offset)
+                fade = max(0.3, 1.0 - dist * 0.25)
+                color = tuple(int(c * fade) for c in dim)
+                draw.text((w // 2, y), lines[idx].text, fill=color, anchor="mt", font=font_normal)
