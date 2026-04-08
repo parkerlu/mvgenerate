@@ -2,6 +2,7 @@ interface Config {
   aspect: string
   theme: string
   lyricsStyle: string
+  mode: string
 }
 
 interface Props {

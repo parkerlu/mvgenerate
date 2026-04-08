@@ -86,7 +86,7 @@ class NeonPulseTheme:
         self, frame: Image.Image, audio_frame: int,
         features: AudioFeatures, w: int, h: int,
     ) -> None:
-        """Draw circular spectrum bars around the disc area."""
+        """Draw 300 circular spectrum bars around the disc area."""
         draw = ImageDraw.Draw(frame)
         center_x = w // 2
         center_y = h // 4 + (min(w, h) // 3) // 2
@@ -95,24 +95,32 @@ class NeonPulseTheme:
             return
 
         spectrum = features.spectrum[audio_frame]
-        num_bars = len(spectrum)
-        base_radius = min(w, h) // 3 // 2 + 30
+        num_bars = 300
+        base_radius = min(w, h) // 3 // 2 + 20
 
-        for i, val in enumerate(spectrum):
+        for i in range(num_bars):
+            # Interpolate spectrum value from 16 bands to 300 bars
+            band_pos = (i / num_bars) * len(spectrum)
+            band_idx = int(band_pos)
+            band_frac = band_pos - band_idx
+            val = spectrum[band_idx % len(spectrum)]
+            if band_idx + 1 < len(spectrum):
+                val = val * (1 - band_frac) + spectrum[band_idx + 1] * band_frac
+
             angle = (i / num_bars) * math.pi * 2 - math.pi / 2
-            bar_length = int(20 + 80 * val)
+            bar_length = int(8 + 60 * val)
 
             x1 = center_x + int(base_radius * math.cos(angle))
             y1 = center_y + int(base_radius * math.sin(angle))
             x2 = center_x + int((base_radius + bar_length) * math.cos(angle))
             y2 = center_y + int((base_radius + bar_length) * math.sin(angle))
 
-            phase = (audio_frame * 0.03 + i * 0.2) % (math.pi * 2)
+            phase = (audio_frame * 0.03 + i * 0.02) % (math.pi * 2)
             r = int(80 + 175 * max(0, math.sin(phase)))
             g = int(200 * max(0, math.sin(phase + math.pi * 2 / 3)))
             b = int(150 + 105 * max(0, math.sin(phase + math.pi * 4 / 3)))
 
-            draw.line([(x1, y1), (x2, y2)], fill=(r, g, b), width=3)
+            draw.line([(x1, y1), (x2, y2)], fill=(r, g, b), width=1)
 
     def draw_title_text(self, draw: ImageDraw.Draw, text: str, canvas_w: int, y: int, max_w: int) -> None:
         draw.text((canvas_w // 2, y), text, fill="white", anchor="mt", font=get_font(48))

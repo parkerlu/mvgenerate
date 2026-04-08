@@ -57,6 +57,11 @@ class AudioFeatures:
     duration: float            # Total duration in seconds
 
 
+class GenerateMode(Enum):
+    FULL = "full"       # Full song
+    CHORUS = "chorus"   # Auto-detect chorus section
+
+
 @dataclass
 class GenerateConfig:
     audio_path: Path
@@ -66,5 +71,6 @@ class GenerateConfig:
     aspect: AspectRatio = AspectRatio.PORTRAIT
     theme: Theme = Theme.NEON
     lyrics_style: LyricsStyle = LyricsStyle.KARAOKE
+    mode: GenerateMode = GenerateMode.FULL
     title: str = ""
     artist: str = ""

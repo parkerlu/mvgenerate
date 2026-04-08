@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 
-from config import AspectRatio, Theme, LyricsStyle, GenerateConfig
+from config import AspectRatio, Theme, LyricsStyle, GenerateMode, GenerateConfig
 from server.tasks import task_manager, TaskStatus
 from mvgenerate import generate
 
@@ -37,6 +37,7 @@ async def generate_video(
     aspect: str = Form("9:16"),
     theme: str = Form("neon"),
     lyrics_style: str = Form("karaoke"),
+    mode: str = Form("full"),
     title: str = Form(""),
     artist: str = Form(""),
 ):
@@ -56,6 +57,7 @@ async def generate_video(
         aspect=AspectRatio(aspect),
         theme=Theme(theme),
         lyrics_style=LyricsStyle(lyrics_style),
+        mode=GenerateMode(mode),
         title=title,
         artist=artist,
     )

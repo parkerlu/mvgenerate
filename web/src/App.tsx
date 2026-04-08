@@ -14,6 +14,7 @@ interface Config {
   aspect: string
   theme: string
   lyricsStyle: string
+  mode: string
 }
 
 const TOTAL_STEPS = 5
@@ -25,6 +26,7 @@ export default function App() {
     aspect: '9:16',
     theme: 'neon',
     lyricsStyle: 'karaoke',
+    mode: 'full',
   })
   const [title, setTitle] = useState('')
   const [artist, setArtist] = useState('')
@@ -55,6 +57,7 @@ export default function App() {
     formData.append('aspect', config.aspect)
     formData.append('theme', config.theme)
     formData.append('lyrics_style', config.lyricsStyle)
+    formData.append('mode', config.mode)
     formData.append('title', title)
     formData.append('artist', artist)
 
@@ -83,7 +86,7 @@ export default function App() {
   function handleNewVideo() {
     setStep(1)
     setFiles({})
-    setConfig({ aspect: '9:16', theme: 'neon', lyricsStyle: 'karaoke' })
+    setConfig({ aspect: '9:16', theme: 'neon', lyricsStyle: 'karaoke', mode: 'full' })
     setTitle('')
     setArtist('')
     setTaskId(null)
@@ -167,6 +170,25 @@ export default function App() {
                 onChange={(e) => setArtist(e.target.value)}
               />
             </div>
+            <div className="form-group">
+              <label>Video Mode</label>
+              <div className="aspect-cards">
+                {[
+                  { value: 'full', label: 'Full Song', desc: 'Generate entire song' },
+                  { value: 'chorus', label: 'Chorus Only', desc: 'Auto-detect & extract chorus' },
+                ].map((opt) => (
+                  <div
+                    key={opt.value}
+                    className={`aspect-card ${config.mode === opt.value ? 'selected' : ''}`}
+                    onClick={() => setConfig({ ...config, mode: opt.value })}
+                  >
+                    <strong>{opt.label}</strong>
+                    <span>{opt.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="form-group">
               <label>Aspect Ratio</label>
               <div className="aspect-cards">
