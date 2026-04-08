@@ -236,9 +236,17 @@ export default function App() {
             <>
               <h2 className="step-title">Your video is ready!</h2>
               <ResultView videoUrl={resultUrl} taskId={taskId!} />
-              <button className="nav-btn secondary" onClick={handleNewVideo} style={{ marginTop: 16 }}>
-                Create Another Video
-              </button>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 }}>
+                <button className="nav-btn primary" onClick={() => { setResultUrl(null); handleGenerate() }}>
+                  Regenerate
+                </button>
+                <button className="nav-btn secondary" onClick={() => setStep(2)}>
+                  Change Theme
+                </button>
+                <button className="nav-btn secondary" onClick={handleNewVideo}>
+                  New Song
+                </button>
+              </div>
             </>
           ) : (
             <>

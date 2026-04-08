@@ -51,6 +51,9 @@ class TaskManager:
                 fn(*args, **kwargs)
                 self.update_task(task_id, status=TaskStatus.COMPLETED, progress=1.0, message="Done")
             except Exception as e:
+                import traceback
+                error_msg = f"{e}\n{traceback.format_exc()}"
+                print(f"[TASK {task_id}] FAILED: {error_msg}")
                 self.update_task(task_id, status=TaskStatus.FAILED, error=str(e))
 
         thread = threading.Thread(target=wrapper, daemon=True)

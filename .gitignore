@@ -4,6 +4,7 @@ __pycache__/
 venv/
 uploads/
 outputs/
+.cache/
 web/node_modules/
 web/dist/
 *.egg-info/

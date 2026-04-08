@@ -11,6 +11,7 @@ from config import (
 )
 from align.lyrics_preprocessor import preprocess_lyrics_file
 from align.lyrics_aligner import align_lyrics
+from align.cache import get_cached, save_cache
 from audio.analyzer import analyze_audio, detect_chorus
 from render.base import Renderer
 from output.composer import compose_video_stream
@@ -38,38 +39,46 @@ def generate(config: GenerateConfig, progress_callback=None) -> None:
         chorus_start, chorus_end = detect_chorus(config.audio_path)
         report(f"Chorus detected: {chorus_start:.1f}s - {chorus_end:.1f}s", 0.04)
 
-    # Step 2: Align lyrics with audio (run in thread with heartbeat)
+    # Step 2: Check cache first, then align
     import threading
     import time
 
-    report("Aligning lyrics with audio...", 0.05)
-    align_result: list = []
-    align_error: list = []
-    align_done = threading.Event()
+    cached = get_cached(config.audio_path, lyrics_lines)
+    if cached:
+        report("Using cached lyrics alignment", 0.19)
+        timed_lines = cached
+    else:
+        report("Aligning lyrics with audio...", 0.05)
+        align_result: list = []
+        align_error: list = []
+        align_done = threading.Event()
 
-    def _align():
-        try:
-            result = align_lyrics(config.audio_path, lyrics_lines)
-            align_result.append(result)
-        except Exception as e:
-            align_error.append(e)
-        finally:
-            align_done.set()
+        def _align():
+            try:
+                result = align_lyrics(config.audio_path, lyrics_lines)
+                align_result.append(result)
+            except Exception as e:
+                align_error.append(e)
+            finally:
+                align_done.set()
 
-    thread = threading.Thread(target=_align, daemon=True)
-    thread.start()
+        thread = threading.Thread(target=_align, daemon=True)
+        thread.start()
 
-    start_time = time.time()
-    while not align_done.is_set():
+        start_time = time.time()
+        while not align_done.is_set():
+            elapsed = int(time.time() - start_time)
+            report(f"Aligning lyrics... ({elapsed}s elapsed)", 0.05 + min(0.14, elapsed * 0.001))
+            align_done.wait(timeout=2.0)
+
+        if align_error:
+            raise align_error[0]
+        timed_lines = align_result[0]
         elapsed = int(time.time() - start_time)
-        report(f"Aligning lyrics... ({elapsed}s elapsed)", 0.05 + min(0.14, elapsed * 0.001))
-        align_done.wait(timeout=2.0)
+        report(f"Lyrics aligned ({elapsed}s)", 0.19)
 
-    if align_error:
-        raise align_error[0]
-    timed_lines = align_result[0]
-    elapsed = int(time.time() - start_time)
-    report(f"Lyrics aligned ({elapsed}s)", 0.19)
+        # Save to cache for next time
+        save_cache(config.audio_path, lyrics_lines, timed_lines)
 
     # Filter lyrics to chorus section if needed
     if chorus_start is not None:
