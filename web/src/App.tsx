@@ -65,22 +65,33 @@ export default function App() {
     const { task_id } = await res.json()
     setTaskId(task_id)
 
-    const evtSource = new EventSource(`/api/progress/${task_id}`)
-    evtSource.onmessage = (event) => {
-      const data = JSON.parse(event.data)
-      setProgress(data.progress)
-      setStatusMsg(data.message)
+    // Poll progress via SSE with reconnection
+    function connectSSE(tid: string) {
+      const evtSource = new EventSource(`/api/progress/${tid}`)
+      evtSource.onmessage = (event) => {
+        const data = JSON.parse(event.data)
+        setProgress(data.progress)
+        setStatusMsg(data.message)
 
-      if (data.status === 'completed') {
-        setResultUrl(`/api/result/${task_id}`)
-        setIsGenerating(false)
+        if (data.status === 'completed') {
+          setResultUrl(`/api/result/${tid}`)
+          setIsGenerating(false)
+          evtSource.close()
+        } else if (data.status === 'failed') {
+          setStatusMsg(`Error: ${data.error}`)
+          setIsGenerating(false)
+          evtSource.close()
+        }
+      }
+      evtSource.onerror = () => {
         evtSource.close()
-      } else if (data.status === 'failed') {
-        setStatusMsg(`Error: ${data.error}`)
-        setIsGenerating(false)
-        evtSource.close()
+        // Reconnect after 2 seconds if still generating
+        setTimeout(() => {
+          if (!resultUrl) connectSSE(tid)
+        }, 2000)
       }
     }
+    connectSSE(task_id)
   }
 
   function handleNewVideo() {
@@ -229,7 +240,25 @@ export default function App() {
                 Create Another Video
               </button>
             </>
-          ) : null}
+          ) : (
+            <>
+              <h2 className="step-title">Checking status...</h2>
+              <p className="step-desc">If the video was generated, it may be available below.</p>
+              {taskId && (
+                <div style={{ textAlign: 'center', marginTop: 20 }}>
+                  <button
+                    className="nav-btn primary"
+                    onClick={() => setResultUrl(`/api/result/${taskId}`)}
+                  >
+                    Check Result
+                  </button>
+                  <button className="nav-btn secondary" onClick={handleNewVideo} style={{ marginLeft: 12 }}>
+                    Start Over
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
