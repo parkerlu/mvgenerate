@@ -5,78 +5,89 @@ interface Config {
 }
 
 interface Props {
+  mode: 'theme' | 'lyrics'
   config: Config
   onConfigChange: (config: Config) => void
 }
 
 const THEMES = [
-  { value: 'neon', label: 'Neon Pulse' },
-  { value: 'vinyl', label: 'Vinyl Minimal' },
-  { value: 'wave', label: 'Wave Groove' },
+  {
+    value: 'neon',
+    label: 'Neon Pulse',
+    desc: 'Cyberpunk neon glow with floating particles and circular spectrum bars',
+    preview: '/previews/theme_neon.png',
+  },
+  {
+    value: 'vinyl',
+    label: 'Vinyl Minimal',
+    desc: 'Clean, warm tones with vinyl record grooves and tonearm',
+    preview: '/previews/theme_vinyl.png',
+  },
+  {
+    value: 'wave',
+    label: 'Wave Groove',
+    desc: 'Dark flowing waves with breathing disc and circular waveform',
+    preview: '/previews/theme_wave.png',
+  },
 ]
 
 const LYRICS_STYLES = [
-  { value: 'karaoke', label: 'KTV Highlight' },
-  { value: 'fade', label: 'Fade In/Out' },
-  { value: 'word-fill', label: 'Word Fill' },
+  {
+    value: 'karaoke',
+    label: 'KTV Highlight',
+    desc: 'Show multiple lines with the current line highlighted, KTV style scrolling',
+    preview: '/previews/lyrics_karaoke.png',
+  },
+  {
+    value: 'fade',
+    label: 'Fade In/Out',
+    desc: 'Display one line at a time with smooth fade transitions',
+    preview: '/previews/lyrics_fade.png',
+  },
+  {
+    value: 'word-fill',
+    label: 'Word Fill',
+    desc: 'Words light up one by one as they are sung, Apple Music style',
+    preview: '/previews/lyrics_word-fill.png',
+  },
 ]
 
-export default function ConfigPanel({ config, onConfigChange }: Props) {
-  function update(key: keyof Config, value: string) {
-    onConfigChange({ ...config, [key]: value })
+export default function ConfigPanel({ mode, config, onConfigChange }: Props) {
+  if (mode === 'theme') {
+    return (
+      <div className="card-grid">
+        {THEMES.map((t) => (
+          <div
+            key={t.value}
+            className={`preview-card ${config.theme === t.value ? 'selected' : ''}`}
+            onClick={() => onConfigChange({ ...config, theme: t.value })}
+          >
+            <img src={t.preview} alt={t.label} className="preview-img theme-img" />
+            <div className="preview-info">
+              <strong>{t.label}</strong>
+              <p>{t.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
   }
 
   return (
-    <div className="section">
-      <h2>Settings</h2>
-
-      <div className="radio-group">
-        <h3 style={{ fontSize: '0.85rem', color: '#888', marginBottom: 8 }}>Aspect Ratio</h3>
-        {['9:16', '16:9'].map((v) => (
-          <label key={v}>
-            <input
-              type="radio"
-              name="aspect"
-              value={v}
-              checked={config.aspect === v}
-              onChange={() => update('aspect', v)}
-            />
-            {v}
-          </label>
-        ))}
-      </div>
-
-      <div className="radio-group">
-        <h3 style={{ fontSize: '0.85rem', color: '#888', marginBottom: 8 }}>Theme</h3>
-        {THEMES.map((t) => (
-          <label key={t.value}>
-            <input
-              type="radio"
-              name="theme"
-              value={t.value}
-              checked={config.theme === t.value}
-              onChange={() => update('theme', t.value)}
-            />
-            {t.label}
-          </label>
-        ))}
-      </div>
-
-      <div className="radio-group">
-        <h3 style={{ fontSize: '0.85rem', color: '#888', marginBottom: 8 }}>Lyrics Style</h3>
-        {LYRICS_STYLES.map((s) => (
-          <label key={s.value}>
-            <input
-              type="radio"
-              name="lyricsStyle"
-              value={s.value}
-              checked={config.lyricsStyle === s.value}
-              onChange={() => update('lyricsStyle', s.value)}
-            />
-            {s.label}
-          </label>
-        ))}
-      </div>
+    <div className="card-grid lyrics-grid">
+      {LYRICS_STYLES.map((s) => (
+        <div
+          key={s.value}
+          className={`preview-card ${config.lyricsStyle === s.value ? 'selected' : ''}`}
+          onClick={() => onConfigChange({ ...config, lyricsStyle: s.value })}
+        >
+          <img src={s.preview} alt={s.label} className="preview-img lyrics-img" />
+          <div className="preview-info">
+            <strong>{s.label}</strong>
+            <p>{s.desc}</p>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

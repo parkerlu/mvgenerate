@@ -12,27 +12,157 @@ body {
 }
 
 .app {
-  max-width: 900px;
+  max-width: 800px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 40px 20px 80px;
 }
 
 .app h1 {
   text-align: center;
-  font-size: 2rem;
-  margin-bottom: 40px;
+  font-size: 2.2rem;
+  margin-bottom: 32px;
   background: linear-gradient(135deg, #00ffff, #ff00ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-.main-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 24px;
+/* Step Indicator */
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 40px;
 }
 
+.step-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  max-width: 100px;
+  position: relative;
+}
+
+.step-dot .dot {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  color: #666;
+  transition: all 0.3s;
+}
+
+.step-dot.active .dot {
+  background: linear-gradient(135deg, #00cccc, #8800ff);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 0 20px rgba(0, 204, 204, 0.3);
+}
+
+.step-dot.done .dot {
+  background: #00cc88;
+  border-color: transparent;
+  color: white;
+}
+
+.step-dot span {
+  font-size: 0.7rem;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.step-dot.active span {
+  color: #00cccc;
+}
+
+.step-dot.done span {
+  color: #00cc88;
+}
+
+/* Wizard Step */
+.wizard-step {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.step-title {
+  text-align: center;
+  font-size: 1.4rem;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.step-desc {
+  text-align: center;
+  color: #888;
+  font-size: 0.9rem;
+  margin-bottom: 28px;
+}
+
+/* Wizard Navigation */
+.wizard-nav {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nav-btn {
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.nav-btn.primary {
+  background: linear-gradient(135deg, #00cccc, #8800ff);
+  color: white;
+}
+
+.nav-btn.primary:hover {
+  box-shadow: 0 0 20px rgba(0, 204, 204, 0.3);
+}
+
+.nav-btn.primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.nav-btn.primary.generate {
+  background: linear-gradient(135deg, #00cc88, #00aacc);
+  padding: 14px 40px;
+  font-size: 1.1rem;
+}
+
+.nav-btn.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #aaa;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.nav-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ddd;
+}
+
+/* Upload Area */
 .section {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
@@ -50,21 +180,24 @@ body {
 
 .upload-zone {
   border: 2px dashed rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 24px;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
   margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .upload-zone:hover {
   border-color: #00ffff;
+  background: rgba(0, 255, 255, 0.03);
 }
 
 .upload-zone.uploaded {
   border-color: #00ff88;
   border-style: solid;
+  background: rgba(0, 255, 136, 0.05);
 }
 
 .upload-zone p {
@@ -86,66 +219,167 @@ body {
   margin-top: 8px;
 }
 
-.radio-group {
-  margin-bottom: 16px;
+/* Preview Cards for Theme & Lyrics */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
 }
 
-.radio-group label {
-  display: block;
-  padding: 8px 12px;
-  border-radius: 6px;
+.preview-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
   cursor: pointer;
-  transition: background 0.2s;
-  font-size: 0.95rem;
+  transition: all 0.25s;
 }
 
-.radio-group label:hover {
-  background: rgba(255, 255, 255, 0.08);
+.preview-card:hover {
+  border-color: rgba(0, 204, 204, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
-.radio-group input[type="radio"] {
-  margin-right: 8px;
+.preview-card.selected {
+  border-color: #00cccc;
+  box-shadow: 0 0 24px rgba(0, 204, 204, 0.2);
 }
 
-.text-inputs {
-  margin-bottom: 24px;
-}
-
-.text-inputs input {
+.preview-img {
   width: 100%;
-  padding: 10px 14px;
-  margin-bottom: 8px;
+  display: block;
+}
+
+.preview-img.theme-img {
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+}
+
+.preview-img.lyrics-img {
+  aspect-ratio: 360 / 200;
+  object-fit: cover;
+}
+
+.preview-info {
+  padding: 12px 14px 16px;
+}
+
+.preview-info strong {
+  display: block;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+  color: #fff;
+}
+
+.preview-info p {
+  font-size: 0.78rem;
+  color: #888;
+  line-height: 1.4;
+}
+
+.preview-card.selected .preview-info strong {
+  color: #00cccc;
+}
+
+/* Song Info Form */
+.info-form {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px 16px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  color: white;
-  font-size: 0.95rem;
-}
-
-.text-inputs input::placeholder {
-  color: #666;
-}
-
-.generate-btn {
-  display: block;
-  width: 100%;
-  padding: 14px;
-  background: linear-gradient(135deg, #00cccc, #8800ff);
-  color: white;
-  border: none;
   border-radius: 8px;
-  font-size: 1.1rem;
-  font-weight: 600;
+  color: white;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #00cccc;
+}
+
+.form-group input::placeholder {
+  color: #555;
+}
+
+/* Aspect Ratio Cards */
+.aspect-cards {
+  display: flex;
+  gap: 16px;
+}
+
+.aspect-card {
+  flex: 1;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
   cursor: pointer;
-  transition: opacity 0.2s;
-  margin-bottom: 24px;
+  transition: all 0.2s;
+  text-align: center;
 }
 
-.generate-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.aspect-card:hover {
+  border-color: rgba(0, 204, 204, 0.4);
 }
 
+.aspect-card.selected {
+  border-color: #00cccc;
+  background: rgba(0, 204, 204, 0.08);
+}
+
+.aspect-box {
+  margin: 0 auto 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.aspect-box.portrait {
+  width: 36px;
+  height: 64px;
+}
+
+.aspect-box.landscape {
+  width: 64px;
+  height: 36px;
+}
+
+.aspect-card strong {
+  display: block;
+  font-size: 1.1rem;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.aspect-card span {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.aspect-card.selected strong {
+  color: #00cccc;
+}
+
+/* Progress */
 .progress-section {
   margin-bottom: 24px;
 }
@@ -171,27 +405,42 @@ body {
   color: #888;
 }
 
+/* Result */
+.result-section {
+  text-align: center;
+}
+
 .result-section video {
   width: 100%;
   max-height: 500px;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  border-radius: 12px;
+  margin-bottom: 16px;
 }
 
 .download-btn {
   display: inline-block;
-  padding: 10px 24px;
-  background: #00cc88;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #00cc88, #00aacc);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 1rem;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: none;
+  transition: box-shadow 0.2s;
 }
 
+.download-btn:hover {
+  box-shadow: 0 0 20px rgba(0, 204, 136, 0.3);
+}
+
+/* Responsive */
 @media (max-width: 640px) {
-  .main-grid {
+  .card-grid {
     grid-template-columns: 1fr;
+  }
+  .aspect-cards {
+    flex-direction: column;
   }
 }

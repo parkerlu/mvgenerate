@@ -16,7 +16,10 @@ interface Config {
   lyricsStyle: string
 }
 
+const TOTAL_STEPS = 5
+
 export default function App() {
+  const [step, setStep] = useState(1)
   const [files, setFiles] = useState<UploadedFiles>({})
   const [config, setConfig] = useState<Config>({
     aspect: '9:16',
@@ -31,12 +34,16 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [resultUrl, setResultUrl] = useState<string | null>(null)
 
-  const canGenerate = files.audio && files.lyrics && files.cover && !isGenerating
+  const canGoNext = () => {
+    if (step === 1) return !!(files.audio && files.lyrics && files.cover)
+    return true
+  }
 
   async function handleGenerate() {
     if (!files.audio || !files.lyrics || !files.cover) return
 
     setIsGenerating(true)
+    setStep(TOTAL_STEPS)
     setProgress(0)
     setStatusMsg('Starting...')
     setResultUrl(null)
@@ -73,42 +80,163 @@ export default function App() {
     }
   }
 
+  function handleNewVideo() {
+    setStep(1)
+    setFiles({})
+    setConfig({ aspect: '9:16', theme: 'neon', lyricsStyle: 'karaoke' })
+    setTitle('')
+    setArtist('')
+    setTaskId(null)
+    setProgress(0)
+    setStatusMsg('')
+    setIsGenerating(false)
+    setResultUrl(null)
+  }
+
+  const stepLabels = ['Upload', 'Theme', 'Lyrics', 'Info', 'Generate']
+
   return (
     <div className="app">
       <h1>MV Generate</h1>
 
-      <div className="main-grid">
-        <UploadArea files={files} onFilesChange={setFiles} />
-        <ConfigPanel config={config} onConfigChange={setConfig} />
+      {/* Step indicator */}
+      <div className="step-indicator">
+        {stepLabels.map((label, i) => (
+          <div key={i} className={`step-dot ${i + 1 === step ? 'active' : ''} ${i + 1 < step ? 'done' : ''}`}>
+            <div className="dot">{i + 1 < step ? '✓' : i + 1}</div>
+            <span>{label}</span>
+          </div>
+        ))}
       </div>
 
-      <div className="text-inputs section">
-        <input
-          placeholder="Song title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <input
-          placeholder="Artist name"
-          value={artist}
-          onChange={(e) => setArtist(e.target.value)}
-        />
-      </div>
-
-      <button
-        className="generate-btn"
-        disabled={!canGenerate}
-        onClick={handleGenerate}
-      >
-        Generate Video
-      </button>
-
-      {isGenerating && (
-        <ProgressBar progress={progress} message={statusMsg} />
+      {/* Step 1: Upload Files */}
+      {step === 1 && (
+        <div className="wizard-step">
+          <h2 className="step-title">Upload your files</h2>
+          <p className="step-desc">Upload an MP3 audio file, lyrics text file, and a cover image.</p>
+          <UploadArea files={files} onFilesChange={setFiles} />
+        </div>
       )}
 
-      {resultUrl && (
-        <ResultView videoUrl={resultUrl} taskId={taskId!} />
+      {/* Step 2: Choose Theme */}
+      {step === 2 && (
+        <div className="wizard-step">
+          <h2 className="step-title">Choose a visual theme</h2>
+          <p className="step-desc">Select the visual style for your music video.</p>
+          <ConfigPanel
+            mode="theme"
+            config={config}
+            onConfigChange={setConfig}
+          />
+        </div>
+      )}
+
+      {/* Step 3: Choose Lyrics Style */}
+      {step === 3 && (
+        <div className="wizard-step">
+          <h2 className="step-title">Choose lyrics display style</h2>
+          <p className="step-desc">Select how lyrics appear in the video.</p>
+          <ConfigPanel
+            mode="lyrics"
+            config={config}
+            onConfigChange={setConfig}
+          />
+        </div>
+      )}
+
+      {/* Step 4: Song Info + Aspect Ratio */}
+      {step === 4 && (
+        <div className="wizard-step">
+          <h2 className="step-title">Song details</h2>
+          <p className="step-desc">Add song info and choose the video format.</p>
+
+          <div className="info-form">
+            <div className="form-group">
+              <label>Song Title</label>
+              <input
+                placeholder="Enter song title..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label>Artist</label>
+              <input
+                placeholder="Enter artist name..."
+                value={artist}
+                onChange={(e) => setArtist(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label>Aspect Ratio</label>
+              <div className="aspect-cards">
+                {[
+                  { value: '9:16', label: '9:16', desc: 'TikTok / Reels' },
+                  { value: '16:9', label: '16:9', desc: 'YouTube / Desktop' },
+                ].map((opt) => (
+                  <div
+                    key={opt.value}
+                    className={`aspect-card ${config.aspect === opt.value ? 'selected' : ''}`}
+                    onClick={() => setConfig({ ...config, aspect: opt.value })}
+                  >
+                    <div className={`aspect-box ${opt.value === '9:16' ? 'portrait' : 'landscape'}`} />
+                    <strong>{opt.label}</strong>
+                    <span>{opt.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 5: Generating / Result */}
+      {step === 5 && (
+        <div className="wizard-step">
+          {isGenerating ? (
+            <>
+              <h2 className="step-title">Generating your video...</h2>
+              <p className="step-desc">This may take a few minutes. Please wait.</p>
+              <ProgressBar progress={progress} message={statusMsg} />
+            </>
+          ) : resultUrl ? (
+            <>
+              <h2 className="step-title">Your video is ready!</h2>
+              <ResultView videoUrl={resultUrl} taskId={taskId!} />
+              <button className="nav-btn secondary" onClick={handleNewVideo} style={{ marginTop: 16 }}>
+                Create Another Video
+              </button>
+            </>
+          ) : null}
+        </div>
+      )}
+
+      {/* Navigation buttons */}
+      {step < 5 && (
+        <div className="wizard-nav">
+          {step > 1 && (
+            <button className="nav-btn secondary" onClick={() => setStep(step - 1)}>
+              Back
+            </button>
+          )}
+          <div style={{ flex: 1 }} />
+          {step < 4 ? (
+            <button
+              className="nav-btn primary"
+              disabled={!canGoNext()}
+              onClick={() => setStep(step + 1)}
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              className="nav-btn primary generate"
+              onClick={handleGenerate}
+            >
+              Generate Video
+            </button>
+          )}
+        </div>
       )}
     </div>
   )
