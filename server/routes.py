@@ -110,16 +110,28 @@ async def get_progress(task_id: str):
 @router.get("/result/{task_id}")
 async def get_result(task_id: str):
     """Download the generated video."""
+    # Try task manager first
     task = task_manager.get_task(task_id)
-    if not task:
-        raise HTTPException(404, "Task not found")
-    if task.status != TaskStatus.COMPLETED:
-        raise HTTPException(400, f"Task not ready: {task.status.value}")
-    if not Path(task.result_path).exists():
-        raise HTTPException(404, "Result file not found")
+    if task and task.status == TaskStatus.COMPLETED and Path(task.result_path).exists():
+        return FileResponse(
+            task.result_path,
+            media_type="video/mp4",
+            filename=f"mv_{task_id}.mp4",
+        )
 
-    return FileResponse(
-        task.result_path,
-        media_type="video/mp4",
-        filename=f"mv_{task_id}.mp4",
+    # Fallback: check if file exists on disk (e.g. after server restart)
+    fallback_path = OUTPUT_DIR / f"{task_id}.mp4"
+    if fallback_path.exists() and fallback_path.stat().st_size > 0:
+        return FileResponse(
+            str(fallback_path),
+            media_type="video/mp4",
+            filename=f"mv_{task_id}.mp4",
+        )
+
+    if task and task.status == TaskStatus.FAILED:
+        raise HTTPException(400, f"Generation failed: {task.error}")
+    if task and task.status == TaskStatus.RUNNING:
+        raise HTTPException(400, "Still generating, please wait")
+
+    raise HTTPException(404, "Result not found")
     )

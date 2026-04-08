@@ -42,6 +42,9 @@ def compose_video_stream(
     fps: int = 30,
 ) -> None:
     """Stream frames directly to FFmpeg via pipe (no disk I/O)."""
+    # Ensure output directory exists
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+
     cmd = [
         "ffmpeg", "-y",
         "-f", "rawvideo",
@@ -62,12 +65,33 @@ def compose_video_stream(
 
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    for frame in frame_iter:
-        proc.stdin.write(frame.tobytes())
+    frames_written = 0
+    try:
+        for frame in frame_iter:
+            # Ensure frame is RGB (not RGBA) and correct size
+            if frame.mode != "RGB":
+                frame = frame.convert("RGB")
+            if frame.size != (width, height):
+                frame = frame.resize((width, height))
+            proc.stdin.write(frame.tobytes())
+            frames_written += 1
+    except BrokenPipeError:
+        pass  # FFmpeg exited early, check stderr below
 
     proc.stdin.close()
     proc.wait()
 
+    stderr = proc.stderr.read().decode()
     if proc.returncode != 0:
-        stderr = proc.stderr.read().decode()
-        raise RuntimeError(f"FFmpeg failed:\n{stderr}")
+        raise RuntimeError(
+            f"FFmpeg failed (exit {proc.returncode}), {frames_written} frames written.\n"
+            f"Audio: {audio_path}\nOutput: {output_path}\n"
+            f"stderr:\n{stderr[-2000:]}"
+        )
+
+    # Verify output file was created
+    if not Path(output_path).exists() or Path(output_path).stat().st_size == 0:
+        raise RuntimeError(
+            f"FFmpeg exited OK but output file is missing/empty.\n"
+            f"{frames_written} frames written. stderr:\n{stderr[-2000:]}"
+        )
