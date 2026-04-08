@@ -10,18 +10,24 @@ class NeonPulseTheme:
 
     def __init__(self):
         self._particles: list[dict] | None = None
+        self._gradient_cache: Image.Image | None = None
 
     def draw_background(self, w: int, h: int, frame_idx: int, features: AudioFeatures) -> Image.Image:
         """Deep blue-to-purple gradient with floating particles."""
-        img = Image.new("RGB", (w, h))
-        draw = ImageDraw.Draw(img)
+        # Cache the gradient - it never changes
+        if self._gradient_cache is None or self._gradient_cache.size != (w, h):
+            img = Image.new("RGB", (w, h))
+            draw = ImageDraw.Draw(img)
+            for y in range(h):
+                ratio = y / h
+                r = int(8 + 25 * ratio)
+                g = int(2 + 8 * (1 - ratio))
+                b = int(35 + 70 * ratio)
+                draw.line([(0, y), (w, y)], fill=(r, g, b))
+            self._gradient_cache = img
 
-        for y in range(h):
-            ratio = y / h
-            r = int(8 + 25 * ratio)
-            g = int(2 + 8 * (1 - ratio))
-            b = int(35 + 70 * ratio)
-            draw.line([(0, y), (w, y)], fill=(r, g, b))
+        img = self._gradient_cache.copy()
+        draw = ImageDraw.Draw(img)
 
         if self._particles is None:
             self._particles = [

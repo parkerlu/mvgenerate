@@ -3,18 +3,17 @@
 """MV Generate — CLI entry point."""
 import argparse
 import sys
-import tempfile
 from pathlib import Path
 
 from config import (
     AspectRatio, Theme, LyricsStyle, GenerateConfig,
-    FPS, COVER_DURATION, TRANSITION_DURATION, OUTRO_DURATION,
+    RESOLUTIONS, FPS,
 )
 from align.lyrics_preprocessor import preprocess_lyrics_file
 from align.lyrics_aligner import align_lyrics
 from audio.analyzer import analyze_audio
 from render.base import Renderer
-from output.composer import compose_video
+from output.composer import compose_video_stream
 
 
 def generate(config: GenerateConfig, progress_callback=None) -> None:
@@ -40,7 +39,7 @@ def generate(config: GenerateConfig, progress_callback=None) -> None:
     report("Analyzing audio...", 0.20)
     features = analyze_audio(config.audio_path)
 
-    # Step 4: Render frames
+    # Step 4: Render + stream to FFmpeg (no temp files)
     report("Initializing renderer...", 0.25)
     renderer = Renderer(
         cover_path=config.cover_path,
@@ -52,23 +51,22 @@ def generate(config: GenerateConfig, progress_callback=None) -> None:
     )
 
     total_frames = renderer.total_frames(features.duration)
+    width, height = RESOLUTIONS[config.aspect]
 
-    with tempfile.TemporaryDirectory(prefix="mvgen_") as tmp_dir:
-        frames_dir = Path(tmp_dir) / "frames"
-        frames_dir.mkdir()
-
+    def frame_generator():
         for i in range(total_frames):
             time_s = i / FPS
             frame = renderer.render_frame(i, time_s, features, timed_lines)
-            frame.save(frames_dir / f"frame_{i:06d}.png")
-
             if i % FPS == 0:
                 pct = 0.25 + 0.65 * (i / total_frames)
                 report(f"Rendering frame {i}/{total_frames}...", pct)
+            yield frame
 
-        # Step 5: Compose video
-        report("Composing final video...", 0.90)
-        compose_video(frames_dir, config.audio_path, config.output_path, FPS)
+    report("Rendering and encoding video...", 0.25)
+    compose_video_stream(
+        frame_generator(), config.audio_path, config.output_path,
+        width, height, FPS,
+    )
 
     report(f"Done! Video saved to {config.output_path}", 1.0)
 

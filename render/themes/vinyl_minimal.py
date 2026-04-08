@@ -7,16 +7,21 @@ from config import AudioFeatures
 class VinylMinimalTheme:
     """Clean, minimal theme with vinyl record aesthetic."""
 
+    def __init__(self):
+        self._gradient_cache: Image.Image | None = None
+
     def draw_background(self, w: int, h: int, frame_idx: int, features: AudioFeatures) -> Image.Image:
-        img = Image.new("RGB", (w, h))
-        draw = ImageDraw.Draw(img)
-        for y in range(h):
-            ratio = y / h
-            r = int(240 - 20 * ratio)
-            g = int(235 - 25 * ratio)
-            b = int(225 - 20 * ratio)
-            draw.line([(0, y), (w, y)], fill=(r, g, b))
-        return img
+        if self._gradient_cache is None or self._gradient_cache.size != (w, h):
+            img = Image.new("RGB", (w, h))
+            draw = ImageDraw.Draw(img)
+            for y in range(h):
+                ratio = y / h
+                r = int(240 - 20 * ratio)
+                g = int(235 - 25 * ratio)
+                b = int(225 - 20 * ratio)
+                draw.line([(0, y), (w, y)], fill=(r, g, b))
+            self._gradient_cache = img
+        return self._gradient_cache.copy()
 
     def draw_disc_effects(
         self, frame: Image.Image, x: int, y: int, size: int,

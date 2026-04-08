@@ -7,24 +7,30 @@ from config import AudioFeatures
 class WaveGrooveTheme:
     """Dynamic theme with flowing wave textures and breathing effects."""
 
-    def draw_background(self, w: int, h: int, frame_idx: int, features: AudioFeatures) -> Image.Image:
-        img = Image.new("RGB", (w, h))
-        draw = ImageDraw.Draw(img)
+    def __init__(self):
+        self._gradient_cache: Image.Image | None = None
 
-        for y in range(h):
-            wave = math.sin(y * 0.01 + frame_idx * 0.02) * 15
-            ratio = y / h
-            r = int(15 + 10 * ratio + wave)
-            g = int(12 + 15 * ratio)
-            b = int(25 + 20 * ratio + wave * 0.5)
-            r = max(0, min(255, r))
-            b = max(0, min(255, b))
-            draw.line([(0, y), (w, y)], fill=(r, g, b))
+    def draw_background(self, w: int, h: int, frame_idx: int, features: AudioFeatures) -> Image.Image:
+        # Cache the static gradient portion
+        if self._gradient_cache is None or self._gradient_cache.size != (w, h):
+            img = Image.new("RGB", (w, h))
+            draw = ImageDraw.Draw(img)
+            for y in range(h):
+                ratio = y / h
+                r = int(15 + 10 * ratio)
+                g = int(12 + 15 * ratio)
+                b = int(25 + 20 * ratio)
+                draw.line([(0, y), (w, y)], fill=(r, g, b))
+            self._gradient_cache = img
+
+        img = self._gradient_cache.copy()
+        draw = ImageDraw.Draw(img)
 
         rms = 0.5
         if frame_idx < len(features.rms):
             rms = features.rms[frame_idx]
 
+        # Only draw animated wave lines (much cheaper than per-pixel gradient)
         for wave_y_base in range(0, h, 120):
             points = []
             for x in range(0, w, 4):
