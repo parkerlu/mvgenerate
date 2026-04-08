@@ -8,19 +8,34 @@ from config import TimedLine, TimedWord
 DEFAULT_MODEL = "mlx-community/whisper-large-v3-mlx"
 
 
-def align_lyrics(audio_path: Path, lyrics_lines: list[str], model_repo: str = DEFAULT_MODEL) -> list[TimedLine]:
+def _detect_language(lyrics_lines: list[str]) -> str:
+    """Auto-detect language from lyrics text. Returns 'zh' for Chinese, 'en' for English, etc."""
+    text = "".join(lyrics_lines)
+    chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
+    total_alpha = sum(1 for c in text if c.isalpha())
+    if total_alpha == 0:
+        return "zh"
+    if chinese_chars / total_alpha > 0.3:
+        return "zh"
+    return "en"
+
+
+def align_lyrics(audio_path: Path, lyrics_lines: list[str], language: str | None = None, model_repo: str = DEFAULT_MODEL) -> list[TimedLine]:
     """
     Align lyrics lines to audio using Whisper word-level timestamps.
 
-    Strategy: Use Whisper to detect all word/syllable boundaries (timing only,
-    ignore transcribed text). Then distribute lyrics lines proportionally across
-    these time markers based on character count. This works regardless of language
-    mismatch between Whisper output and actual lyrics.
+    Strategy: Force Whisper to use the correct language for accurate
+    character/word-level timestamps, then distribute lyrics lines
+    proportionally based on character count.
     """
+    if language is None:
+        language = _detect_language(lyrics_lines)
+
     result = mlx_whisper.transcribe(
         str(audio_path),
         path_or_hf_repo=model_repo,
         word_timestamps=True,
+        language=language,
     )
 
     # Collect all word timestamps (we only care about timing, not text)
