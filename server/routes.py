@@ -134,4 +134,3 @@ async def get_result(task_id: str):
         raise HTTPException(400, "Still generating, please wait")
 
     raise HTTPException(404, "Result not found")
-    )
