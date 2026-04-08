@@ -219,6 +219,66 @@ body {
   margin-top: 8px;
 }
 
+/* Lyrics section */
+.lyrics-section {
+  margin-bottom: 12px;
+}
+
+.lyrics-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 8px;
+}
+
+.lyrics-tab {
+  flex: 1;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #888;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lyrics-tab:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.lyrics-tab:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+.lyrics-tab.active {
+  background: rgba(0, 204, 204, 0.15);
+  border-color: #00cccc;
+  color: #00cccc;
+}
+
+.lyrics-textarea {
+  width: 100%;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+  font-family: inherit;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 160px;
+  transition: border-color 0.2s;
+}
+
+.lyrics-textarea:focus {
+  outline: none;
+  border-color: #00cccc;
+}
+
+.lyrics-textarea::placeholder {
+  color: #555;
+}
+
 /* Preview Cards for Theme & Lyrics */
 .card-grid {
   display: grid;
