@@ -1,7 +1,8 @@
 # render/themes/vinyl_minimal.py
 import math
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 from config import AudioFeatures
+from render.fonts import get_font
 
 
 class VinylMinimalTheme:
@@ -74,18 +75,10 @@ class VinylMinimalTheme:
             )
 
     def draw_title_text(self, draw: ImageDraw.Draw, text: str, canvas_w: int, y: int, max_w: int) -> None:
-        try:
-            font = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 48)
-        except OSError:
-            font = ImageFont.load_default()
-        draw.text((canvas_w // 2, y), text, fill=(40, 35, 30), anchor="mt", font=font)
+        draw.text((canvas_w // 2, y), text, fill=(40, 35, 30), anchor="mt", font=get_font(48))
 
     def draw_artist_text(self, draw: ImageDraw.Draw, text: str, canvas_w: int, y: int, max_w: int) -> None:
-        try:
-            font = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 32)
-        except OSError:
-            font = ImageFont.load_default()
-        draw.text((canvas_w // 2, y), text, fill=(100, 95, 90), anchor="mt", font=font)
+        draw.text((canvas_w // 2, y), text, fill=(100, 95, 90), anchor="mt", font=get_font(32))
 
     def get_lyrics_color(self) -> tuple[int, int, int]:
         return (40, 35, 30)

@@ -1,8 +1,9 @@
 # render/themes/neon_pulse.py
 import math
 import random
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw
 from config import AudioFeatures
+from render.fonts import get_font
 
 
 class NeonPulseTheme:
@@ -114,18 +115,10 @@ class NeonPulseTheme:
             draw.line([(x1, y1), (x2, y2)], fill=(r, g, b), width=3)
 
     def draw_title_text(self, draw: ImageDraw.Draw, text: str, canvas_w: int, y: int, max_w: int) -> None:
-        try:
-            font = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 48)
-        except OSError:
-            font = ImageFont.load_default()
-        draw.text((canvas_w // 2, y), text, fill="white", anchor="mt", font=font)
+        draw.text((canvas_w // 2, y), text, fill="white", anchor="mt", font=get_font(48))
 
     def draw_artist_text(self, draw: ImageDraw.Draw, text: str, canvas_w: int, y: int, max_w: int) -> None:
-        try:
-            font = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 32)
-        except OSError:
-            font = ImageFont.load_default()
-        draw.text((canvas_w // 2, y), text, fill=(180, 180, 200), anchor="mt", font=font)
+        draw.text((canvas_w // 2, y), text, fill=(180, 180, 200), anchor="mt", font=get_font(32))
 
     def get_lyrics_color(self) -> tuple[int, int, int]:
         return (255, 255, 255)

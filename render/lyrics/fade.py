@@ -1,6 +1,7 @@
 # render/lyrics/fade.py
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 from config import TimedLine
+from render.fonts import get_font
 
 
 class FadeLyrics:
@@ -11,10 +12,7 @@ class FadeLyrics:
             return
 
         draw = ImageDraw.Draw(frame)
-        try:
-            font = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 38)
-        except OSError:
-            font = ImageFont.load_default()
+        font = get_font(38)
 
         lyrics_y = int(h * 0.68)
 

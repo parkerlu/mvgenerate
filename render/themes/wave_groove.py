@@ -1,7 +1,8 @@
 # render/themes/wave_groove.py
 import math
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 from config import AudioFeatures
+from render.fonts import get_font
 
 
 class WaveGrooveTheme:
@@ -84,18 +85,10 @@ class WaveGrooveTheme:
             draw.line(points, fill=(80, 120, 200), width=2)
 
     def draw_title_text(self, draw: ImageDraw.Draw, text: str, canvas_w: int, y: int, max_w: int) -> None:
-        try:
-            font = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 48)
-        except OSError:
-            font = ImageFont.load_default()
-        draw.text((canvas_w // 2, y), text, fill="white", anchor="mt", font=font)
+        draw.text((canvas_w // 2, y), text, fill="white", anchor="mt", font=get_font(48))
 
     def draw_artist_text(self, draw: ImageDraw.Draw, text: str, canvas_w: int, y: int, max_w: int) -> None:
-        try:
-            font = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 32)
-        except OSError:
-            font = ImageFont.load_default()
-        draw.text((canvas_w // 2, y), text, fill=(160, 180, 220), anchor="mt", font=font)
+        draw.text((canvas_w // 2, y), text, fill=(160, 180, 220), anchor="mt", font=get_font(32))
 
     def get_lyrics_color(self) -> tuple[int, int, int]:
         return (255, 255, 255)

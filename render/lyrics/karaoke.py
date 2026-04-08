@@ -1,6 +1,7 @@
 # render/lyrics/karaoke.py
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 from config import TimedLine
+from render.fonts import get_font
 
 
 class KaraokeLyrics:
@@ -11,13 +12,8 @@ class KaraokeLyrics:
             return
 
         draw = ImageDraw.Draw(frame)
-
-        try:
-            font_highlight = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 40)
-            font_normal = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 30)
-        except OSError:
-            font_highlight = ImageFont.load_default()
-            font_normal = font_highlight
+        font_highlight = get_font(40)
+        font_normal = get_font(30)
 
         current_idx = 0
         for i, line in enumerate(lines):

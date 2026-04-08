@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Generate preview thumbnails for themes and lyrics styles."""
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
+from render.fonts import get_font
 
 from config import AudioFeatures, TimedLine, FPS
 
@@ -67,12 +68,8 @@ def render_theme_preview(theme_cls, name: str, cover: Image.Image):
 
     # Draw sample lyrics (karaoke style, simplified)
     draw = ImageDraw.Draw(frame)
-    try:
-        font_big = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 22)
-        font_small = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 16)
-    except OSError:
-        font_big = ImageFont.load_default()
-        font_small = font_big
+    font_big = get_font(22)
+    font_small = get_font(16)
 
     lyrics_y = int(PREVIEW_H * 0.62)
     highlight = theme.get_lyrics_highlight_color()
@@ -93,14 +90,9 @@ def render_lyrics_preview(style_name: str):
     img = Image.new("RGB", (w, h), (15, 15, 30))
     draw = ImageDraw.Draw(img)
 
-    try:
-        font_big = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 22)
-        font_med = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 18)
-        font_small = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 16)
-    except OSError:
-        font_big = ImageFont.load_default()
-        font_med = font_big
-        font_small = font_big
+    font_big = get_font(22)
+    font_med = get_font(18)
+    font_small = get_font(16)
 
     highlight = (0, 255, 255)
     dim = (80, 80, 100)
