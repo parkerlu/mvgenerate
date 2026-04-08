@@ -1,40 +1,45 @@
 # align/lyrics_aligner.py
 from pathlib import Path
-from faster_whisper import WhisperModel
+import mlx_whisper
 
 from config import TimedLine, TimedWord
 
+# MLX Whisper model repo (Apple Silicon optimized)
+DEFAULT_MODEL = "mlx-community/whisper-large-v3-mlx"
 
-def align_lyrics(audio_path: Path, lyrics_lines: list[str], model_size: str = "large-v3") -> list[TimedLine]:
+
+def align_lyrics(audio_path: Path, lyrics_lines: list[str], model_repo: str = DEFAULT_MODEL) -> list[TimedLine]:
     """
-    Align lyrics lines to audio using Whisper forced alignment.
+    Align lyrics lines to audio using MLX Whisper (Apple Silicon).
 
     1. Transcribe the audio with Whisper (word-level timestamps).
     2. Match each provided lyrics line against the transcription.
     3. Return TimedLine objects with start/end times and word timestamps.
     """
-    model = WhisperModel(model_size, device="auto", compute_type="auto")
-
-    segments, _info = model.transcribe(
+    result = mlx_whisper.transcribe(
         str(audio_path),
-        language=None,  # auto-detect
+        path_or_hf_repo=model_repo,
         word_timestamps=True,
     )
 
     # Collect all transcribed words with timestamps
     transcribed_words: list[TimedWord] = []
-    for segment in segments:
-        if segment.words:
-            for w in segment.words:
+    for segment in result.get("segments", []):
+        for w in segment.get("words", []):
+            text = w.get("word", "").strip()
+            if text:
                 transcribed_words.append(TimedWord(
-                    text=w.word.strip(),
-                    start=w.start,
-                    end=w.end,
+                    text=text,
+                    start=w["start"],
+                    end=w["end"],
                 ))
 
     if not transcribed_words:
         # Fallback: evenly distribute lyrics across audio duration
-        return _even_distribute(lyrics_lines, _info.duration)
+        duration = result.get("duration", 0.0)
+        if not duration and "segments" in result and result["segments"]:
+            duration = result["segments"][-1].get("end", 0.0)
+        return _even_distribute(lyrics_lines, duration)
 
     # Match lyrics lines to transcribed words using greedy alignment
     timed_lines = _match_lines_to_words(lyrics_lines, transcribed_words)
