@@ -27,3 +27,29 @@ def test_sim_partial_match_chinese():
 def test_sim_empty_strings():
     assert sim("", "") == 1.0
     assert sim("", "你好") == 0.0
+
+
+from align.sequence_aligner import Segment, skip_cost
+
+
+def test_skip_cost_pure_filler():
+    # Pure filler segments: almost free to skip
+    assert skip_cost(Segment(text="嗯", start=0, end=0.5)) == -0.05
+    assert skip_cost(Segment(text="啊啊", start=0, end=0.5)) == -0.05
+    assert skip_cost(Segment(text="哦 哦", start=0, end=0.5)) == -0.05  # whitespace normalized away
+
+
+def test_skip_cost_very_short():
+    # Non-filler but very short (<=2 chars)
+    assert skip_cost(Segment(text="好的", start=0, end=0.5)) == -0.10
+
+
+def test_skip_cost_normal_length():
+    # Normal length: -0.05 * len
+    assert skip_cost(Segment(text="你好世界吗", start=0, end=2.0)) == -0.25  # 5 chars
+
+
+def test_skip_cost_capped():
+    # Long segment capped at -0.5
+    long_text = "一二三四五六七八九十十一十二"
+    assert skip_cost(Segment(text=long_text, start=0, end=5.0)) == -0.5
