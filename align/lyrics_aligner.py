@@ -83,6 +83,13 @@ def _emit_timed_lines(
             prev_end = timed[-1].end if timed else 0.0
             start = prev_end
             end = min(next_start, prev_end + 0.1)
+        # Monotonicity guard: even if upstream DP or LLM returned
+        # non-monotonic assignments, the emitted timeline must not move
+        # backwards. Clamp to previous line's end.
+        if timed and start < timed[-1].end:
+            start = timed[-1].end
+            if end < start:
+                end = start
         timed.append(TimedLine(text=line, start=start, end=end))
     return timed
 

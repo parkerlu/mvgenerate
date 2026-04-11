@@ -220,6 +220,7 @@ def _parse_response(
         raise ValueError("alignment field is not a list")
 
     last_user_idx = -1
+    last_max_seg = -1
     for entry in alignment:
         if not isinstance(entry, dict):
             raise ValueError("alignment entry is not a dict")
@@ -237,4 +238,14 @@ def _parse_response(
         for s in segment_idxs:
             if not (s_start <= s <= s_end):
                 raise ValueError(f"segment_idx {s} out of window [{s_start},{s_end}]")
+        # Cross-entry monotonicity: later user lines must map to segments
+        # at or after earlier user lines. Prevents LLM from creating
+        # non-monotonic timelines by reusing earlier segments.
+        if segment_idxs:
+            if min(segment_idxs) < last_max_seg:
+                raise ValueError(
+                    f"segment_idxs {segment_idxs} for user_idx {user_idx} "
+                    f"violates monotonicity (earlier lines already used up to {last_max_seg})"
+                )
+            last_max_seg = max(last_max_seg, max(segment_idxs))
     return alignment
