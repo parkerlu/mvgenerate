@@ -39,6 +39,12 @@ def test_skip_cost_pure_filler():
     assert skip_cost(Segment(text="哦 哦", start=0, end=0.5)) == -0.05  # whitespace normalized away
 
 
+def test_skip_cost_empty_text():
+    # Empty or whitespace-only segments should return the filler penalty
+    assert skip_cost(Segment(text="", start=0, end=0.5)) == -0.05
+    assert skip_cost(Segment(text="   ", start=0, end=0.5)) == -0.05
+
+
 def test_skip_cost_very_short():
     # Non-filler but very short (<=2 chars)
     assert skip_cost(Segment(text="好的", start=0, end=0.5)) == -0.10

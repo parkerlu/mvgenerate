@@ -32,7 +32,7 @@ def sim(a: str, b: str) -> float:
     return difflib.SequenceMatcher(None, a_norm, b_norm).ratio()
 
 
-_FILLERS = set("嗯啊哦呀呃喔唉嘿哟噢咦哈")
+_FILLERS = frozenset("嗯啊哦呀呃喔唉嘿哟噢咦哈")
 
 
 def skip_cost(segment: Segment) -> float:
