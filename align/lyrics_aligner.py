@@ -54,38 +54,52 @@ def _get_provider() -> LLMProvider | None:
         return None
 
 
-def _next_matched_start(
-    after_idx: int,
-    alignments: list[LineAlignment],
-    segments: list[Segment],
-    total_duration: float,
-) -> float:
-    for j in range(after_idx + 1, len(alignments)):
-        if alignments[j].segment_idxs:
-            return min(segments[k].start for k in alignments[j].segment_idxs)
-    return total_duration
-
-
 def _emit_timed_lines(
     lyric_lines: list[str],
     alignments: list[LineAlignment],
     segments: list[Segment],
     total_duration: float,
 ) -> list[TimedLine]:
+    n = len(lyric_lines)
+    # First pass: resolve matched lines to concrete (start, end) tuples;
+    # leave unmatched lines as None placeholders.
+    slots: list[tuple[float, float] | None] = [None] * n
+    for i in range(n):
+        idxs = alignments[i].segment_idxs
+        if idxs:
+            slots[i] = (
+                min(segments[k].start for k in idxs),
+                max(segments[k].end for k in idxs),
+            )
+
+    # Second pass: distribute contiguous runs of unmatched lines evenly
+    # across the gap between surrounding matched lines (or audio bounds).
+    i = 0
+    while i < n:
+        if slots[i] is not None:
+            i += 1
+            continue
+        run_start = i
+        while i < n and slots[i] is None:
+            i += 1
+        run_end = i - 1
+        gap_start = slots[run_start - 1][1] if run_start > 0 else 0.0
+        gap_end = slots[i][0] if i < n else total_duration
+        if gap_end < gap_start:
+            gap_end = gap_start
+        span = gap_end - gap_start
+        count = run_end - run_start + 1
+        slot_len = span / count if count > 0 else 0.0
+        for k, line_idx in enumerate(range(run_start, run_end + 1)):
+            s = gap_start + k * slot_len
+            e = s + slot_len
+            slots[line_idx] = (s, e)
+
+    # Third pass: final monotonicity clamp as a belt-and-suspenders guard
+    # against any upstream inconsistency.
     timed: list[TimedLine] = []
     for i, line in enumerate(lyric_lines):
-        a = alignments[i]
-        if a.segment_idxs:
-            start = min(segments[k].start for k in a.segment_idxs)
-            end = max(segments[k].end for k in a.segment_idxs)
-        else:
-            next_start = _next_matched_start(i, alignments, segments, total_duration)
-            prev_end = timed[-1].end if timed else 0.0
-            start = prev_end
-            end = min(next_start, prev_end + 0.1)
-        # Monotonicity guard: even if upstream DP or LLM returned
-        # non-monotonic assignments, the emitted timeline must not move
-        # backwards. Clamp to previous line's end.
+        start, end = slots[i]  # type: ignore[misc]
         if timed and start < timed[-1].end:
             start = timed[-1].end
             if end < start:
