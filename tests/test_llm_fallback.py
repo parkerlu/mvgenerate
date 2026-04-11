@@ -83,14 +83,14 @@ def test_refine_applies_llm_mapping():
     fake_provider = MagicMock(spec=LLMProvider)
     fake_provider.chat.return_value = (
         '{"alignment": ['
-        '{"user_idx": 1, "segment_idxs": [2]}'
+        '{"user_idx": 1, "segment_idxs": [1, 2]}'
         ']}'
     )
 
     refined = refine(lyrics, segments, alignments, confidences, provider=fake_provider)
 
     assert fake_provider.chat.called
-    assert refined[1].segment_idxs == [2]
+    assert refined[1].segment_idxs == [1, 2]
 
 
 def test_refine_skips_when_all_high_confidence():

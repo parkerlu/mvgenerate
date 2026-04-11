@@ -1,8 +1,14 @@
 """LLM fallback for refining low-confidence lyric alignment windows."""
 from __future__ import annotations
 
+import json
+import logging
 import os
 from abc import ABC, abstractmethod
+
+from align.sequence_aligner import Segment, LineAlignment
+
+logger = logging.getLogger(__name__)
 
 
 class LLMProvider(ABC):
@@ -58,13 +64,6 @@ class ClaudeProvider(LLMProvider):
         )
         return response.content[0].text
 
-
-import json
-import logging
-
-from align.sequence_aligner import Segment, LineAlignment
-
-logger = logging.getLogger(__name__)
 
 CONFIDENCE_THRESHOLD = 0.55
 CONTEXT_EXPAND = 1
@@ -159,7 +158,7 @@ def refine(
                 provider, user_payload, l_start, l_end, s_start, s_end
             )
             for entry in mapping:
-                result[entry['user_idx']].segment_idxs = entry['segment_idxs']
+                result[entry['user_idx']].segment_idxs = list(entry['segment_idxs'])
             logger.info(f"LLM refined window lines {l_start}-{l_end}")
         except Exception as e:
             logger.warning(f"LLM refine failed for window {window}: {e}, keeping classical result")
@@ -222,7 +221,11 @@ def _parse_response(
 
     last_user_idx = -1
     for entry in alignment:
+        if not isinstance(entry, dict):
+            raise ValueError("alignment entry is not a dict")
         user_idx = entry["user_idx"]
+        if not isinstance(user_idx, int):
+            raise ValueError("user_idx is not an int")
         segment_idxs = entry["segment_idxs"]
         if not (l_start <= user_idx <= l_end):
             raise ValueError(f"user_idx {user_idx} out of window [{l_start},{l_end}]")
