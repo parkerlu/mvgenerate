@@ -112,6 +112,22 @@ def align(
                     dp[i][j + 1] = score
                     parent[i][j + 1] = (i, j, 'skip_segment')
 
+            # Action: match lyric i to segments j, j+1 (1:2)
+            if i < n and j + 1 < m:
+                merged = segments[j].text + segments[j + 1].text
+                score = dp[i][j] + sim(lyric_lines[i], merged)
+                if score > dp[i + 1][j + 2]:
+                    dp[i + 1][j + 2] = score
+                    parent[i + 1][j + 2] = (i, j, 'match_1_2')
+
+            # Action: match lyrics i, i+1 to segment j (2:1)
+            if i + 1 < n and j < m:
+                merged = lyric_lines[i] + lyric_lines[i + 1]
+                score = dp[i][j] + sim(merged, segments[j].text)
+                if score > dp[i + 2][j + 1]:
+                    dp[i + 2][j + 1] = score
+                    parent[i + 2][j + 1] = (i, j, 'match_2_1')
+
     # Backtrack from (n, m)
     alignments: list[LineAlignment] = [LineAlignment(i, []) for i in range(n)]
     i, j = n, m
@@ -121,12 +137,21 @@ def align(
             break
         prev_i, prev_j, action = p
         if action == 'match_1_1':
-            # NOTE: segment_idxs is appended in reverse order during backtrack.
-            # For 1:1 the list is always length-1 so order is irrelevant here.
-            # Task 5 (1:2/2:1 merging) must reverse segment_idxs at the end of
-            # the backtrack loop, or append in the correct order per action.
             alignments[prev_i].segment_idxs.append(prev_j)
+        elif action == 'match_1_2':
+            # Line `prev_i` matches both segments j=prev_j and j+1=prev_j+1.
+            # Append both; reversed at end of backtrack.
+            alignments[prev_i].segment_idxs.append(prev_j + 1)
+            alignments[prev_i].segment_idxs.append(prev_j)
+        elif action == 'match_2_1':
+            # Lines prev_i and prev_i+1 both match segment prev_j.
+            alignments[prev_i].segment_idxs.append(prev_j)
+            alignments[prev_i + 1].segment_idxs.append(prev_j)
         i, j = prev_i, prev_j
+
+    # Segment indices were accumulated in reverse backtrack order; restore ascending order.
+    for a in alignments:
+        a.segment_idxs.reverse()
 
     # Compute confidences
     confidences: list[float] = []

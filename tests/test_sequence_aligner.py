@@ -77,3 +77,30 @@ def test_align_perfect_one_to_one():
     assert alignments[1] == LineAlignment(line_idx=1, segment_idxs=[1])
     assert confidences[0] == 1.0
     assert confidences[1] == 1.0
+
+
+def test_align_one_lyric_two_segments():
+    # Whisper split a lyric line into two segments
+    lyrics = ["你曾说过海枯石烂"]
+    segments = [
+        Segment(text="你曾说过", start=1.0, end=2.5),
+        Segment(text="海枯石烂", start=2.5, end=4.0),
+    ]
+    alignments, confidences = align(lyrics, segments)
+
+    assert len(alignments) == 1
+    assert alignments[0].segment_idxs == [0, 1]
+    assert confidences[0] > 0.9
+
+
+def test_align_two_lyrics_one_segment():
+    # Whisper merged two lyric lines into one segment
+    lyrics = ["你好世界", "再见月亮"]
+    segments = [
+        Segment(text="你好世界再见月亮", start=1.0, end=5.0),
+    ]
+    alignments, confidences = align(lyrics, segments)
+
+    assert len(alignments) == 2
+    assert alignments[0].segment_idxs == [0]
+    assert alignments[1].segment_idxs == [0]
