@@ -172,3 +172,34 @@ def test_refine_rejects_out_of_range_segment_idx():
     refined = refine(lyrics, segments, alignments, confidences, provider=fake_provider)
 
     assert refined[1].segment_idxs == [1]
+
+
+def test_refine_rejects_non_monotonic_segment_idxs():
+    # 行 1 已指向 segment 2，行 2 不能回退到 segment 1
+    lyrics = ["行一", "行二", "行三"]
+    segments = [
+        Segment("行一", 0.0, 1.0),
+        Segment("X", 1.0, 2.0),
+        Segment("Y", 2.0, 3.0),
+    ]
+    alignments = [
+        LineAlignment(0, [0]),
+        LineAlignment(1, [1]),
+        LineAlignment(2, [2]),
+    ]
+    confidences = [1.0, 0.3, 0.3]
+
+    fake_provider = MagicMock(spec=LLMProvider)
+    # LLM 给行 2 分配 segment 2，行 3 分配 segment 1（时间倒退）
+    fake_provider.chat.return_value = (
+        '{"alignment":['
+        '{"user_idx":1,"segment_idxs":[2]},'
+        '{"user_idx":2,"segment_idxs":[1]}'
+        ']}'
+    )
+
+    refined = refine(lyrics, segments, alignments, confidences, provider=fake_provider)
+
+    # 被拒绝，保留原始结果
+    assert refined[1].segment_idxs == [1]
+    assert refined[2].segment_idxs == [2]
