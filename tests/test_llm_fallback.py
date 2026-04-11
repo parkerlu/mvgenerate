@@ -104,3 +104,71 @@ def test_refine_skips_when_all_high_confidence():
 
     assert not fake_provider.chat.called
     assert refined == alignments
+
+
+def test_refine_falls_back_on_invalid_json():
+    lyrics = ["行一", "行二"]
+    segments = [Segment("行一", 0.0, 1.0), Segment("对不上", 1.0, 2.0)]
+    alignments = [LineAlignment(0, [0]), LineAlignment(1, [1])]
+    confidences = [1.0, 0.3]
+
+    fake_provider = MagicMock(spec=LLMProvider)
+    fake_provider.chat.return_value = "this is not json"
+
+    refined = refine(lyrics, segments, alignments, confidences, provider=fake_provider)
+
+    # 应该保留原始结果
+    assert refined[1].segment_idxs == [1]
+
+
+def test_refine_falls_back_on_provider_exception():
+    lyrics = ["行一", "行二"]
+    segments = [Segment("行一", 0.0, 1.0), Segment("对不上", 1.0, 2.0)]
+    alignments = [LineAlignment(0, [0]), LineAlignment(1, [1])]
+    confidences = [1.0, 0.3]
+
+    fake_provider = MagicMock(spec=LLMProvider)
+    fake_provider.chat.side_effect = ConnectionError("network down")
+
+    refined = refine(lyrics, segments, alignments, confidences, provider=fake_provider)
+
+    # 重试 1 次后仍失败，应保留原始结果
+    assert refined[1].segment_idxs == [1]
+    assert fake_provider.chat.call_count == 2  # 1 次 + 1 次重试
+
+
+def test_refine_rejects_non_monotonic_user_idx():
+    lyrics = ["行一", "行二", "行三"]
+    segments = [Segment("行一", 0.0, 1.0), Segment("X", 1.0, 2.0), Segment("Y", 2.0, 3.0)]
+    alignments = [LineAlignment(0, [0]), LineAlignment(1, [1]), LineAlignment(2, [2])]
+    confidences = [1.0, 0.3, 0.3]
+
+    fake_provider = MagicMock(spec=LLMProvider)
+    # 返回乱序的 user_idx
+    fake_provider.chat.return_value = (
+        '{"alignment":['
+        '{"user_idx":2,"segment_idxs":[2]},'
+        '{"user_idx":1,"segment_idxs":[1]}'
+        ']}'
+    )
+
+    refined = refine(lyrics, segments, alignments, confidences, provider=fake_provider)
+
+    # 被拒绝，保留原始结果
+    assert refined[1].segment_idxs == [1]
+    assert refined[2].segment_idxs == [2]
+
+
+def test_refine_rejects_out_of_range_segment_idx():
+    lyrics = ["行一", "行二"]
+    segments = [Segment("行一", 0.0, 1.0), Segment("行二", 1.0, 2.0)]
+    alignments = [LineAlignment(0, [0]), LineAlignment(1, [1])]
+    confidences = [1.0, 0.3]
+
+    fake_provider = MagicMock(spec=LLMProvider)
+    # segment_idx 越界
+    fake_provider.chat.return_value = '{"alignment":[{"user_idx":1,"segment_idxs":[99]}]}'
+
+    refined = refine(lyrics, segments, alignments, confidences, provider=fake_provider)
+
+    assert refined[1].segment_idxs == [1]
