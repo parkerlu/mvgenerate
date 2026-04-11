@@ -59,3 +59,21 @@ def test_skip_cost_capped():
     # Long segment capped at -0.5
     long_text = "一二三四五六七八九十十一十二"
     assert skip_cost(Segment(text=long_text, start=0, end=5.0)) == -0.5
+
+
+from align.sequence_aligner import align, LineAlignment
+
+
+def test_align_perfect_one_to_one():
+    lyrics = ["你好世界", "再见月亮"]
+    segments = [
+        Segment(text="你好世界", start=1.0, end=3.0),
+        Segment(text="再见月亮", start=4.0, end=6.0),
+    ]
+    alignments, confidences = align(lyrics, segments)
+
+    assert len(alignments) == 2
+    assert alignments[0] == LineAlignment(line_idx=0, segment_idxs=[0])
+    assert alignments[1] == LineAlignment(line_idx=1, segment_idxs=[1])
+    assert confidences[0] == 1.0
+    assert confidences[1] == 1.0
