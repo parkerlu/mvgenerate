@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import difflib
+import math
 from dataclasses import dataclass
 
 
@@ -87,7 +88,7 @@ def align(
 
     for i in range(n + 1):
         for j in range(m + 1):
-            if dp[i][j] == NEG_INF:
+            if math.isinf(dp[i][j]):
                 continue
 
             # Action: match lyric i to segment j (1:1)
@@ -120,6 +121,10 @@ def align(
             break
         prev_i, prev_j, action = p
         if action == 'match_1_1':
+            # NOTE: segment_idxs is appended in reverse order during backtrack.
+            # For 1:1 the list is always length-1 so order is irrelevant here.
+            # Task 5 (1:2/2:1 merging) must reverse segment_idxs at the end of
+            # the backtrack loop, or append in the correct order per action.
             alignments[prev_i].segment_idxs.append(prev_j)
         i, j = prev_i, prev_j
 
