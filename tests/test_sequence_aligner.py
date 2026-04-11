@@ -104,3 +104,45 @@ def test_align_two_lyrics_one_segment():
     assert len(alignments) == 2
     assert alignments[0].segment_idxs == [0]
     assert alignments[1].segment_idxs == [0]
+
+
+def test_align_skips_filler_segment():
+    # Whisper 识别出了衬词 "嗯"，不在歌词里
+    lyrics = ["你曾说过海枯石烂", "如今却各自天涯"]
+    segments = [
+        Segment(text="你曾说过海枯石烂", start=1.0, end=4.0),
+        Segment(text="嗯", start=4.0, end=4.3),  # 衬词
+        Segment(text="如今却各自天涯", start=4.3, end=7.0),
+    ]
+    alignments, confidences = align(lyrics, segments)
+
+    assert alignments[0].segment_idxs == [0]
+    assert alignments[1].segment_idxs == [2]
+    assert all(c > 0.9 for c in confidences)
+
+
+def test_align_whisper_dropped_a_char():
+    # Whisper 少听了一个字，相似度应该仍然高
+    lyrics = ["你曾说过海枯石烂"]
+    segments = [
+        Segment(text="你曾说海枯石烂", start=1.0, end=4.0),  # 漏了"过"
+    ]
+    alignments, confidences = align(lyrics, segments)
+
+    assert alignments[0].segment_idxs == [0]
+    assert confidences[0] > 0.85  # 高但不是完美
+
+
+def test_align_completely_unmatched_lyric_gets_low_confidence():
+    # 歌词里有一行 Whisper 完全没识别到
+    lyrics = ["你好世界", "这行没人唱"]
+    segments = [
+        Segment(text="你好世界", start=1.0, end=3.0),
+    ]
+    alignments, confidences = align(lyrics, segments)
+
+    assert alignments[0].segment_idxs == [0]
+    assert confidences[0] == 1.0
+    # 第二行也被分配到相同segment，但置信度为 0（相似度为0）
+    assert alignments[1].segment_idxs == [0]
+    assert confidences[1] == 0.0
